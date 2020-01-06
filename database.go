@@ -1,19 +1,19 @@
 package database
 
 import (
+	"context"
+
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/metrics"
-	"github.com/miekg/dns"
 	"github.com/jinzhu/gorm"
-	"context"
+	"github.com/miekg/dns"
 )
 
 const Name = "database"
 
 type DBBackend struct {
 	*gorm.DB
-	Debug bool
-	Next  plugin.Handler
+	Next plugin.Handler
 }
 
 func (backend DBBackend) Name() string { return Name }

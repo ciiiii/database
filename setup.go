@@ -1,13 +1,14 @@
 package database
 
 import (
+	"fmt"
+	"strconv"
+
 	"github.com/caddyserver/caddy"
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/metrics"
 	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
-	"fmt"
 )
 
 func init() {
@@ -23,43 +24,75 @@ func setup(c *caddy.Controller) error {
 		return nil
 	})
 	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
-		return DBBackend{Next: next, Debug: true}
+		return DBBackend{Next: next}
 	})
 
 	return nil
 }
 
 func parseDBConfig(c *caddy.Controller) (*DBBackend, error) {
-	//var (
-	//	username string
-	//	password string
-	//	host string
-	//	port string
-	//	db string
-	//	suffix string
-	//)
+	var (
+		dialect  string
+		err      error
+		username string
+		password string
+		host     string
+		port     int
+		dbName   string
+		ssl      string
+		debug    bool
+	)
+	backend := DBBackend{}
+	debug = false
 	for c.Next() {
-		fmt.Print(c.RemainingArgs())
+		args := c.RemainingArgs()
+		if len(args) == 0 {
+			dialect = "postgres"
+		} else {
+			dialect = args[0]
+		}
 		for c.NextBlock() {
 			switch c.Val() {
 			case "username":
-				fmt.Print("username", c.RemainingArgs())
+				username = c.RemainingArgs()[0]
 			case "password":
-				fmt.Print("password", c.RemainingArgs())
+				password = c.RemainingArgs()[0]
+			case "host":
+				host = c.RemainingArgs()[0]
+			case "port":
+				port, err = strconv.Atoi(c.RemainingArgs()[0])
+				if err != nil {
+					return &backend, c.Errf("port should be int '%s'", c.Val())
+				}
+			case "db":
+				dbName = c.RemainingArgs()[0]
+			case "ssl":
+				ssl = c.RemainingArgs()[0]
+			case "debug":
+				debug = true
 			default:
 				if c.Val() != "}" {
-
+					return &backend, c.Errf("unknown property '%s'", c.Val())
 				}
 			}
 		}
 	}
-	//backend := DBBackend{}
-	return &DBBackend{}, nil
+	db, err := newDBClient(dialect, host, username, password, dbName, ssl, port)
+	if err != nil {
+		fmt.Print(err)
+		return &backend, c.Errf("db connect error '%s:%s@tcp(%s:%d)/%s'", username, password, host, port, dbName)
+	}
+	if debug {
+		backend.DB = db.Debug()
+	} else {
+		backend.DB = db
+	}
+	return &backend, nil
 }
 
-func newDBClient(host, username, password, dbName string, port int) (*gorm.DB, error) {
-	connArgs := fmt.Sprintf("host=%s port=%d user=%s dbname=%s password=%s", host, port, username, dbName, password)
-	db, err := gorm.Open("postgres", connArgs)
+func newDBClient(dialect, host, username, password, dbName, ssl string, port int) (*gorm.DB, error) {
+	connArgs := fmt.Sprintf("host=%s port=%d user=%s dbname=%s password=%s sslmode=%s", host, port, username, dbName, password, ssl)
+	db, err := gorm.Open(dialect, connArgs)
 	if err != nil {
 		return db, err
 	}
