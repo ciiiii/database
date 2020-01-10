@@ -14,7 +14,11 @@ import (
 	"github.com/miekg/dns"
 )
 
-const Name = "database"
+const (
+	name     = "database"
+	priority = 10
+	ttl      = 30
+)
 
 var errKeyNotFound = errors.New("key not found")
 
@@ -25,7 +29,7 @@ type DBBackend struct {
 	Next     plugin.Handler
 }
 
-func (backend *DBBackend) Name() string { return Name }
+func (backend *DBBackend) Name() string { return name }
 func (backend *DBBackend) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	requestCount.WithLabelValues(metrics.WithServer(ctx)).Inc()
 	opt := plugin.Options{}
@@ -71,7 +75,7 @@ func (backend *DBBackend) ServeDNS(ctx context.Context, w dns.ResponseWriter, r 
 		//	return plugin.NextOrFailure(backend.Name(), backend.Next, ctx, w, r)
 		//}
 		// Make err nil when returning here, so we don't log spam for NXDOMAIN.
-		return plugin.BackendError(ctx, backend, zone, dns.RcodeNameError, state, nil /* err */, opt)
+		return plugin.BackendError(ctx, backend, zone, dns.RcodeNameError, state, nil /* err */ , opt)
 	}
 	if err != nil {
 		return plugin.BackendError(ctx, backend, zone, dns.RcodeServerFailure, state, err, opt)
@@ -99,7 +103,7 @@ func (backend *DBBackend) Services(ctx context.Context, state request.Request, e
 	if err != nil {
 		return nil, err
 	}
-	return msg.Group(services), err
+	return services, err
 }
 
 func (backend *DBBackend) Reverse(ctx context.Context, state request.Request, exact bool, opt plugin.Options) ([]msg.Service, error) {
@@ -137,11 +141,11 @@ func (backend *DBBackend) Records(ctx context.Context, state request.Request, ex
 		services = append(services, msg.Service{
 			Host:        service.Host,
 			Port:        service.Port,
-			Priority:    service.Priority,
+			Priority:    setDefaultPriority(service.Priority),
 			Weight:      service.Weight,
 			Text:        service.Text,
 			Mail:        service.Mail,
-			TTL:         service.TTL,
+			TTL:         setDefaultTTL(service.TTL),
 			TargetStrip: 0,
 			Group:       "",
 			Key:         "",
@@ -155,5 +159,22 @@ func (backend *DBBackend) get(name string) ([]Service, error) {
 	if err := backend.DB.Model(&Service{}).Where("name = ?", name).Scan(&serviceList).Error; err != nil {
 		return nil, err
 	}
+	if len(serviceList) == 0 {
+		return nil, errKeyNotFound
+	}
 	return serviceList, nil
+}
+
+func setDefaultPriority(p int) int {
+	if p == 0 {
+		return priority
+	}
+	return p
+}
+
+func setDefaultTTL(t uint32) uint32 {
+	if t == 0 {
+		return ttl
+	}
+	return t
 }
