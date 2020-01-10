@@ -5,8 +5,6 @@ import (
 	"errors"
 	"time"
 
-	"fmt"
-
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/etcd/msg"
 	"github.com/coredns/coredns/plugin/metrics"
@@ -154,10 +152,8 @@ func (backend *DBBackend) Records(ctx context.Context, state request.Request, ex
 
 func (backend *DBBackend) get(name string) ([]Service, error) {
 	var serviceList []Service
-	fmt.Print(name)
-	if err := backend.DB.Model(&Service{}).Where("name = ?", name).Scan(&serviceList).Debug().Error; err != nil {
+	if err := backend.DB.Model(&Service{}).Where("name = ?", name).Scan(&serviceList).Error; err != nil {
 		return nil, err
 	}
-	fmt.Print(len(serviceList))
 	return serviceList, nil
 }

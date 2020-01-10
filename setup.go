@@ -8,8 +8,8 @@ import (
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/metrics"
-	"github.com/jinzhu/gorm"
 	"github.com/coredns/coredns/plugin/pkg/upstream"
+	"github.com/jinzhu/gorm"
 )
 
 func init() {
