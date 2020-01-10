@@ -9,6 +9,7 @@ import (
 	"github.com/coredns/coredns/plugin"
 	"github.com/coredns/coredns/plugin/metrics"
 	"github.com/jinzhu/gorm"
+	"github.com/coredns/coredns/plugin/pkg/upstream"
 )
 
 func init() {
@@ -16,7 +17,10 @@ func init() {
 }
 
 func setup(c *caddy.Controller) error {
-	parseDBConfig(c)
+	backend, err := parseDBConfig(c)
+	if err != nil {
+		return err
+	}
 	c.OnStartup(func() error {
 		once.Do(func() {
 			metrics.MustRegister(c, requestCount)
@@ -24,7 +28,8 @@ func setup(c *caddy.Controller) error {
 		return nil
 	})
 	dnsserver.GetConfig(c).AddPlugin(func(next plugin.Handler) plugin.Handler {
-		return DBBackend{Next: next}
+		backend.Next = next
+		return backend
 	})
 
 	return nil
@@ -44,6 +49,12 @@ func parseDBConfig(c *caddy.Controller) (*DBBackend, error) {
 	)
 	backend := DBBackend{}
 	debug = false
+	backend.Zones = make([]string, len(c.ServerBlockKeys))
+	copy(backend.Zones, c.ServerBlockKeys)
+	for _, s := range backend.Zones {
+		fmt.Println(s)
+	}
+	backend.Upstream = upstream.New()
 	for c.Next() {
 		args := c.RemainingArgs()
 		if len(args) == 0 {
@@ -96,6 +107,6 @@ func newDBClient(dialect, host, username, password, dbName, ssl string, port int
 	if err != nil {
 		return db, err
 	}
-	db.AutoMigrate(&Domain{}, &Record{})
+	db.AutoMigrate(&Service{})
 	return db, nil
 }
