@@ -90,8 +90,7 @@ func parseDBConfig(c *caddy.Controller) (*DBBackend, error) {
 	}
 	db, err := newDBClient(dialect, host, username, password, dbName, ssl, port)
 	if err != nil {
-		fmt.Print(err)
-		return &backend, c.Errf("db connect error '%s:%s@tcp(%s:%d)/%s'", username, password, host, port, dbName)
+		return &backend, c.Errf("db connect error '%s:%s@tcp(%s:%d)/%s'\n%s", username, password, host, port, dbName, err.Error())
 	}
 	if debug {
 		backend.DB = db.Debug()
