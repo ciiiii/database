@@ -32,13 +32,7 @@ func (backend *DBBackend) ServeDNS(ctx context.Context, w dns.ResponseWriter, r 
 	requestCount.WithLabelValues(metrics.WithServer(ctx)).Inc()
 	opt := plugin.Options{}
 	state := request.Request{W: w, Req: r}
-	fmt.Println(len(backend.Zones))
-	fmt.Println(backend.Zones[0], state.Name())
-	fmt.Println(dns.CompareDomainName(backend.Zones[0], state.Name()))
-	fmt.Println(dns.CountLabel(backend.Zones[0]))
-	fmt.Println(dns.IsSubDomain(backend.Zones[0], state.Name()))
 	zone := plugin.Zones(backend.Zones).Matches(state.Name())
-	fmt.Println(zone)
 	if zone == "" {
 		return plugin.NextOrFailure(backend.Name(), backend.Next, ctx, w, r)
 	}

@@ -51,8 +51,8 @@ func parseDBConfig(c *caddy.Controller) (*DBBackend, error) {
 	debug = false
 	backend.Zones = make([]string, len(c.ServerBlockKeys))
 	copy(backend.Zones, c.ServerBlockKeys)
-	for _, s := range backend.Zones {
-		fmt.Println(s)
+	for i, str := range backend.Zones {
+		backend.Zones[i] = plugin.Host(str).Normalize()
 	}
 	backend.Upstream = upstream.New()
 	for c.Next() {
