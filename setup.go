@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	plugin.Register(Name, setup)
+	plugin.Register(name, setup)
 }
 
 func setup(c *caddy.Controller) error {
