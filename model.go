@@ -1,7 +1,7 @@
 package database
 
 type Service struct {
-	ID       uint64 `gorm:"type:bigint(20) unsigned auto_increment;not null;primary_key"`
+	ID       uint   `gorm:"primary_key"`
 	Name     string `gorm:"type:varchar(255)"`
 	Host     string `gorm:"type:varchar(15)"`
 	Port     int    `gorm:"type:integer"`
